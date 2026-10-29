@@ -1,0 +1,1085 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Taskbox - Tablero Kanban (Clon de Jira para Google Sites)</title>
+  <style>
+    :root {
+      --bg-primary: #f4f5f7;
+      --bg-surface: #ffffff;
+      --bg-column: #ebecf0;
+      --text-main: #172b4d;
+      --text-subtle: #5e6c84;
+      --border-color: #dfe1e6;
+      --primary-color: #0052cc;
+      --primary-hover: #0747a6;
+      --danger-color: #de350b;
+      --danger-hover: #bf2600;
+      --success-color: #00875a;
+      --warning-color: #ffab00;
+      --priority-high: #ff5630;
+      --priority-medium: #ffab00;
+      --priority-low: #36b37e;
+      --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      --shadow-card: 0 1px 3px rgba(9, 30, 66, 0.15);
+      --shadow-drag: 0 8px 16px rgba(9, 30, 66, 0.25);
+      --radius: 4px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: var(--font-family);
+      background-color: var(--bg-primary);
+      color: var(--text-main);
+      padding: 16px;
+      line-height: 1.4;
+      font-size: 14px;
+    }
+
+    /* Top Bar & Controls */
+    header {
+      background: var(--bg-surface);
+      border-radius: var(--radius);
+      padding: 12px 16px;
+      margin-bottom: 16px;
+      box-shadow: var(--shadow-card);
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .brand-logo {
+      width: 24px;
+      height: 24px;
+      background: var(--primary-color);
+      border-radius: 3px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-weight: 700;
+      font-size: 14px;
+    }
+
+    .brand-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .actions-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    button {
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 6px 12px;
+      border-radius: var(--radius);
+      border: none;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: background-color 0.15s ease;
+    }
+
+    .btn-primary {
+      background: var(--primary-color);
+      color: #fff;
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-hover);
+    }
+
+    .btn-secondary {
+      background: var(--bg-column);
+      color: var(--text-main);
+    }
+
+    .btn-secondary:hover {
+      background: #dfe1e6;
+    }
+
+    .btn-tab {
+      background: transparent;
+      color: var(--text-subtle);
+      border-bottom: 2px solid transparent;
+      border-radius: 0;
+      padding: 6px 10px;
+    }
+
+    .btn-tab.active {
+      color: var(--primary-color);
+      border-bottom-color: var(--primary-color);
+      font-weight: 700;
+    }
+
+    /* Config panel */
+    .config-box {
+      width: 100%;
+      background: #fafbfc;
+      border: 1px dashed var(--border-color);
+      border-radius: var(--radius);
+      padding: 8px 12px;
+      display: none;
+      gap: 8px;
+      align-items: center;
+      font-size: 12px;
+    }
+
+    .config-box.open {
+      display: flex;
+    }
+
+    .config-input {
+      flex: 1;
+      padding: 4px 8px;
+      font-size: 12px;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+    }
+
+    /* Board Columns */
+    .kanban-view {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(280px, 1fr));
+      gap: 16px;
+      align-items: start;
+    }
+
+    @media (max-width: 900px) {
+      .kanban-view {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .column {
+      background-color: var(--bg-column);
+      border-radius: var(--radius);
+      display: flex;
+      flex-direction: column;
+      max-height: calc(100vh - 120px);
+    }
+
+    .column-header {
+      padding: 12px 14px;
+      font-weight: 700;
+      text-transform: uppercase;
+      font-size: 12px;
+      color: var(--text-subtle);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      letter-spacing: 0.5px;
+    }
+
+    .counter {
+      background: rgba(9, 30, 66, 0.08);
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 11px;
+    }
+
+    .card-list {
+      padding: 0 10px 10px 10px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      min-height: 80px;
+      transition: background-color 0.2s ease;
+    }
+
+    .card-list.drag-over {
+      background-color: rgba(9, 30, 66, 0.04);
+      outline: 2px dashed var(--primary-color);
+      border-radius: var(--radius);
+    }
+
+    /* Cards */
+    .card {
+      background: var(--bg-surface);
+      border-radius: var(--radius);
+      padding: 12px;
+      box-shadow: var(--shadow-card);
+      cursor: grab;
+      user-select: none;
+      border-left: 4px solid transparent;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .card:hover {
+      box-shadow: 0 3px 6px rgba(9, 30, 66, 0.2);
+    }
+
+    .card.dragging {
+      opacity: 0.5;
+      cursor: grabbing;
+      box-shadow: var(--shadow-drag);
+      transform: scale(1.02);
+    }
+
+    .card.priority-HIGH {
+      border-left-color: var(--priority-high);
+    }
+    .card.priority-MEDIUM {
+      border-left-color: var(--priority-medium);
+    }
+    .card.priority-LOW {
+      border-left-color: var(--priority-low);
+    }
+
+    .card-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .card-id {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-subtle);
+    }
+
+    .card-actions-quick {
+      display: flex;
+      gap: 4px;
+    }
+
+    .btn-quick {
+      background: transparent;
+      color: var(--text-subtle);
+      padding: 2px 6px;
+      font-size: 11px;
+      border-radius: 3px;
+    }
+
+    .btn-quick:hover {
+      background: var(--bg-column);
+      color: var(--text-main);
+    }
+
+    .card-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-main);
+      word-break: break-word;
+    }
+
+    .card-bottom {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 4px;
+      font-size: 11px;
+    }
+
+    .card-badges {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .badge-fibonacci {
+      background: #deebff;
+      color: var(--primary-color);
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 10px;
+      font-size: 10px;
+    }
+
+    .badge-priority {
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 10px;
+      color: #fff;
+    }
+
+    .badge-priority.HIGH {
+      background: var(--priority-high);
+    }
+    .badge-priority.MEDIUM {
+      background: var(--priority-medium);
+      color: #172b4d;
+    }
+    .badge-priority.LOW {
+      background: var(--priority-low);
+    }
+
+    .card-assignee {
+      color: var(--text-subtle);
+      font-style: italic;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 110px;
+    }
+
+    /* Alternative Transition Buttons for Touch / Restricted Iframes */
+    .touch-controls {
+      display: flex;
+      justify-content: flex-end;
+      gap: 4px;
+      margin-top: 6px;
+      border-top: 1px solid #f4f5f7;
+      padding-top: 4px;
+    }
+
+    .touch-btn {
+      font-size: 10px;
+      padding: 2px 6px;
+      background: #f4f5f7;
+      color: var(--text-subtle);
+      border-radius: 3px;
+    }
+
+    .touch-btn:hover {
+      background: #ebecf0;
+      color: var(--text-main);
+    }
+
+    /* Trash View */
+    .trash-view {
+      display: none;
+      background: var(--bg-surface);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-card);
+      padding: 16px;
+    }
+
+    .trash-view.active {
+      display: block;
+    }
+
+    .trash-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 12px;
+    }
+
+    .trash-table th, .trash-table td {
+      padding: 10px;
+      text-align: left;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .trash-table th {
+      font-size: 12px;
+      color: var(--text-subtle);
+      text-transform: uppercase;
+    }
+
+    .badge-restorable {
+      background: #e3fcef;
+      color: var(--success-color);
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 11px;
+    }
+
+    .badge-expired {
+      background: #ffebe6;
+      color: var(--danger-color);
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 11px;
+    }
+
+    /* Modal */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(9, 30, 66, 0.54);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 16px;
+    }
+
+    .modal-overlay.open {
+      display: flex;
+    }
+
+    .modal {
+      background: #fff;
+      border-radius: var(--radius);
+      width: 100%;
+      max-width: 500px;
+      box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .modal-header {
+      padding: 16px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .modal-title {
+      font-size: 16px;
+      font-weight: 700;
+    }
+
+    .modal-body {
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .form-group label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-subtle);
+    }
+
+    .form-control {
+      padding: 8px;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      font-family: inherit;
+      font-size: 13px;
+    }
+
+    .form-control:focus {
+      outline: none;
+      border-color: var(--primary-color);
+    }
+
+    .modal-footer {
+      padding: 12px 16px;
+      border-top: 1px solid var(--border-color);
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+
+    /* Toast Notifications */
+    .toast-container {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      z-index: 2000;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .toast {
+      padding: 10px 14px;
+      border-radius: var(--radius);
+      color: #fff;
+      font-size: 13px;
+      font-weight: 500;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      animation: fadeIn 0.2s ease;
+    }
+
+    .toast-success { background: var(--success-color); }
+    .toast-error { background: var(--danger-color); }
+    .toast-info { background: var(--primary-color); }
+
+    /* Loading Spinner */
+    .spinner-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(255, 255, 255, 0.7);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 3000;
+    }
+
+    .spinner-overlay.active {
+      display: flex;
+    }
+
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 4px solid var(--bg-column);
+      border-top-color: var(--primary-color);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Loading Indicator -->
+  <div class="spinner-overlay" id="loadingOverlay">
+    <div class="spinner"></div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- Header -->
+  <header>
+    <div class="brand">
+      <div class="brand-logo">J</div>
+      <div class="brand-title">Taskbox Kanban</div>
+    </div>
+    <div class="actions-bar">
+      <button class="btn-tab active" id="tabBoard" onclick="switchView('board')">Tablero</button>
+      <button class="btn-tab" id="tabTrash" onclick="switchView('trash')">Papelera (<span id="trashCount">0</span>)</button>
+      <button class="btn-secondary" onclick="toggleConfig()">⚙️ URL Backend</button>
+      <button class="btn-secondary" onclick="loadAllData()">🔄 Recargar</button>
+      <button class="btn-primary" onclick="openCreateModal()">+ Crear Tarea</button>
+    </div>
+
+    <!-- Backend URL Configuration -->
+    <div class="config-box" id="configBox">
+      <span><strong>Apps Script Web App URL:</strong></span>
+      <input type="text" class="config-input" id="apiUrlInput" placeholder="https://script.google.com/macros/s/.../exec">
+      <button class="btn-primary" onclick="saveApiUrl()">Guardar</button>
+    </div>
+  </header>
+
+  <!-- Kanban View -->
+  <main class="kanban-view" id="kanbanView">
+    <!-- TODO Column -->
+    <div class="column" data-status="TODO" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event, 'TODO')">
+      <div class="column-header">
+        <span>Por Hacer</span>
+        <span class="counter" id="count-TODO">0</span>
+      </div>
+      <div class="card-list" id="list-TODO"></div>
+    </div>
+
+    <!-- IN_PROGRESS Column -->
+    <div class="column" data-status="IN_PROGRESS" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event, 'IN_PROGRESS')">
+      <div class="column-header">
+        <span>En Progreso</span>
+        <span class="counter" id="count-IN_PROGRESS">0</span>
+      </div>
+      <div class="card-list" id="list-IN_PROGRESS"></div>
+    </div>
+
+    <!-- DONE Column -->
+    <div class="column" data-status="DONE" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event, 'DONE')">
+      <div class="column-header">
+        <span>Completado</span>
+        <span class="counter" id="count-DONE">0</span>
+      </div>
+      <div class="card-list" id="list-DONE"></div>
+    </div>
+  </main>
+
+  <!-- Trash / Papelera View -->
+  <section class="trash-view" id="trashView">
+    <h3>Papelera de Tareas (Ventana de restauración: 30 días)</h3>
+    <p style="color: var(--text-subtle); margin-top: 4px; font-size: 13px;">
+      Las tareas eliminadas se conservan durante un plazo máximo de 30 días naturales. Pasado este plazo no podrán ser restauradas.
+    </p>
+    <table class="trash-table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Título</th>
+          <th>Fecha Eliminación</th>
+          <th>Plazo Restante</th>
+          <th>Acción</th>
+        </tr>
+      </thead>
+      <tbody id="trashTableBody">
+        <tr><td colspan="5" style="text-align: center; color: var(--text-subtle);">Cargando papelera...</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- Task Modal (Create & Edit) -->
+  <div class="modal-overlay" id="taskModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h4 class="modal-title" id="modalTitle">Nueva Tarea</h4>
+        <button class="btn-quick" onclick="closeModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="taskId">
+        
+        <div class="form-group">
+          <label for="taskTitleInput">Título (* Obligatorio, máx. 120 caracteres)</label>
+          <input type="text" class="form-control" id="taskTitleInput" maxlength="120" placeholder="Ej. Implementar autenticación">
+        </div>
+
+        <div class="form-group">
+          <label for="taskDescInput">Descripción</label>
+          <textarea class="form-control" id="taskDescInput" rows="3" maxlength="2000" placeholder="Detalles de la tarea..."></textarea>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div class="form-group">
+            <label for="taskPriorityInput">Prioridad</label>
+            <select class="form-control" id="taskPriorityInput">
+              <option value="LOW">Baja (LOW)</option>
+              <option value="MEDIUM" selected>Media (MEDIUM)</option>
+              <option value="HIGH">Alta (HIGH)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="taskPointsInput">Story Points (Fibonacci)</label>
+            <select class="form-control" id="taskPointsInput">
+              <option value="">Sin estimar</option>
+              <option value="1">1 pt</option>
+              <option value="2">2 pts</option>
+              <option value="3">3 pts</option>
+              <option value="5">5 pts</option>
+              <option value="8">8 pts</option>
+              <option value="13">13 pts</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="taskAssigneeInput">Responsable</label>
+          <input type="text" class="form-control" id="taskAssigneeInput" maxlength="80" placeholder="Nombre o correo">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" onclick="closeModal()">Cancelar</button>
+        <button class="btn-primary" onclick="submitTaskForm()">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Client JavaScript Logic -->
+  <script>
+    // Configuration & State
+    let API_URL = localStorage.getItem('TASKBOX_API_URL') || '';
+    let currentTasks = [];
+    let archivedTasks = [];
+    let draggedTaskId = null;
+
+    document.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('apiUrlInput').value = API_URL;
+      if (!API_URL) {
+        toggleConfig(true);
+        showToast('Configura la URL de tu Web App de Apps Script para comenzar.', 'info');
+      } else {
+        loadAllData();
+      }
+    });
+
+    function toggleConfig(forceOpen = false) {
+      const box = document.getElementById('configBox');
+      if (forceOpen || !box.classList.contains('open')) {
+        box.classList.add('open');
+      } else {
+        box.classList.remove('open');
+      }
+    }
+
+    function saveApiUrl() {
+      const val = document.getElementById('apiUrlInput').value.trim();
+      if (!val) {
+        showToast('Ingresa una URL válida de Apps Script.', 'error');
+        return;
+      }
+      API_URL = val;
+      localStorage.setItem('TASKBOX_API_URL', val);
+      toggleConfig(false);
+      showToast('URL configurada correctamente.', 'success');
+      loadAllData();
+    }
+
+    function showLoading(show) {
+      const el = document.getElementById('loadingOverlay');
+      if (show) el.classList.add('active');
+      else el.classList.remove('active');
+    }
+
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      toast.className = `toast toast-${type}`;
+      toast.textContent = message;
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.remove();
+      }, 3500);
+    }
+
+    // HTTP Client (Compatible with Google Sites CORS restrictions)
+    async function callApi(action, data = {}) {
+      if (!API_URL) {
+        showToast('Por favor configura la URL de la Web App en ⚙️.', 'error');
+        return null;
+      }
+
+      showLoading(true);
+      try {
+        const payload = JSON.stringify({ action, ...data });
+        const response = await fetch(API_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'text/plain;charset=utf-8'
+          },
+          body: payload
+        });
+
+        const json = await response.json();
+        if (!json.success) {
+          throw new Error(json.error?.message || 'Error en el servidor.');
+        }
+        return json.data;
+      } catch (err) {
+        showToast(err.message, 'error');
+        return null;
+      } finally {
+        showLoading(false);
+      }
+    }
+
+    // View Switching (Tablero vs Papelera)
+    function switchView(viewName) {
+      const tabBoard = document.getElementById('tabBoard');
+      const tabTrash = document.getElementById('tabTrash');
+      const kanbanView = document.getElementById('kanbanView');
+      const trashView = document.getElementById('trashView');
+
+      if (viewName === 'board') {
+        tabBoard.classList.add('active');
+        tabTrash.classList.remove('active');
+        kanbanView.style.display = 'grid';
+        trashView.classList.remove('active');
+      } else {
+        tabBoard.classList.remove('active');
+        tabTrash.classList.add('active');
+        kanbanView.style.display = 'none';
+        trashView.classList.add('active');
+        loadArchivedData();
+      }
+    }
+
+    // Data Loaders
+    async function loadAllData() {
+      const data = await callApi('getBoardTasks');
+      if (data) {
+        currentTasks = data;
+        renderBoard();
+      }
+      loadArchivedCount();
+    }
+
+    async function loadArchivedCount() {
+      const archived = await callApi('getArchivedTasks');
+      if (archived) {
+        archivedTasks = archived;
+        document.getElementById('trashCount').textContent = archived.length;
+      }
+    }
+
+    async function loadArchivedData() {
+      const archived = await callApi('getArchivedTasks');
+      if (archived) {
+        archivedTasks = archived;
+        document.getElementById('trashCount').textContent = archived.length;
+        renderTrash();
+      }
+    }
+
+    // Rendering Kanban Board
+    function renderBoard() {
+      const lists = {
+        TODO: document.getElementById('list-TODO'),
+        IN_PROGRESS: document.getElementById('list-IN_PROGRESS'),
+        DONE: document.getElementById('list-DONE'),
+      };
+
+      const counts = { TODO: 0, IN_PROGRESS: 0, DONE: 0 };
+      Object.values(lists).forEach(el => el.innerHTML = '');
+
+      currentTasks.forEach(task => {
+        const col = lists[task.status] || lists.TODO;
+        counts[task.status] = (counts[task.status] || 0) + 1;
+        col.appendChild(createCardElement(task));
+      });
+
+      document.getElementById('count-TODO').textContent = counts.TODO || 0;
+      document.getElementById('count-IN_PROGRESS').textContent = counts.IN_PROGRESS || 0;
+      document.getElementById('count-DONE').textContent = counts.DONE || 0;
+    }
+
+    function createCardElement(task) {
+      const card = document.createElement('div');
+      card.className = `card priority-${task.priority}`;
+      card.draggable = true;
+      card.id = `card-${task.id}`;
+
+      // Native Drag & Drop events
+      card.addEventListener('dragstart', (e) => {
+        draggedTaskId = task.id;
+        card.classList.add('dragging');
+        e.dataTransfer.setData('text/plain', task.id);
+      });
+
+      card.addEventListener('dragend', () => {
+        draggedTaskId = null;
+        card.classList.remove('dragging');
+      });
+
+      const nextTransitions = {
+        TODO: [{ to: 'IN_PROGRESS', label: '→ En Progreso' }],
+        IN_PROGRESS: [{ to: 'TODO', label: '← Por Hacer' }, { to: 'DONE', label: '→ Completado' }],
+        DONE: [{ to: 'IN_PROGRESS', label: '← En Progreso' }]
+      };
+
+      const availableBtns = nextTransitions[task.status] || [];
+      const touchBtnsHtml = availableBtns.map(btn => 
+        `<button class="touch-btn" onclick="moveTask('${task.id}', '${btn.to}')">${btn.label}</button>`
+      ).join('');
+
+      card.innerHTML = `
+        <div class="card-top">
+          <span class="card-id">${task.id}</span>
+          <div class="card-actions-quick">
+            <button class="btn-quick" title="Editar" onclick="openEditModal('${task.id}')">✏️</button>
+            <button class="btn-quick" title="Eliminar (a papelera)" onclick="deleteTaskPrompt('${task.id}')">🗑️</button>
+          </div>
+        </div>
+        <div class="card-title">${escapeHtml(task.title)}</div>
+        <div class="card-bottom">
+          <div class="card-badges">
+            ${task.storyPoints ? `<span class="badge-fibonacci" title="Story Points Fibonacci">${task.storyPoints} pts</span>` : ''}
+            <span class="badge-priority ${task.priority}">${task.priority}</span>
+          </div>
+          <div class="card-assignee" title="${escapeHtml(task.assignee || 'Sin asignar')}">
+            ${task.assignee ? '👤 ' + escapeHtml(task.assignee) : ''}
+          </div>
+        </div>
+        <div class="touch-controls">
+          ${touchBtnsHtml}
+        </div>
+      `;
+
+      return card;
+    }
+
+    // Drag and Drop Event Handlers
+    function handleDragOver(e) {
+      e.preventDefault();
+      const col = e.currentTarget;
+      const list = col.querySelector('.card-list');
+      if (list) list.classList.add('drag-over');
+    }
+
+    function handleDragLeave(e) {
+      const col = e.currentTarget;
+      const list = col.querySelector('.card-list');
+      if (list) list.classList.remove('drag-over');
+    }
+
+    async function handleDrop(e, targetStatus) {
+      e.preventDefault();
+      const col = e.currentTarget;
+      const list = col.querySelector('.card-list');
+      if (list) list.classList.remove('drag-over');
+
+      if (!draggedTaskId) return;
+      const task = currentTasks.find(t => t.id === draggedTaskId);
+      if (task && task.status !== targetStatus) {
+        await moveTask(task.id, targetStatus);
+      }
+    }
+
+    async function moveTask(id, newStatus) {
+      const res = await callApi('updateTaskStatus', { id, status: newStatus });
+      if (res) {
+        showToast(`Tarea ${id} movida a ${newStatus}.`, 'success');
+        await loadAllData();
+      }
+    }
+
+    // Trash View Rendering
+    function renderTrash() {
+      const tbody = document.getElementById('trashTableBody');
+      if (!archivedTasks || archivedTasks.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-subtle);">La papelera está vacía.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = archivedTasks.map(t => {
+        const deletedDate = t.deletedAt ? new Date(t.deletedAt).toLocaleDateString() : 'N/A';
+        const isRestorable = t.isRestorable;
+        const daysRemaining = t.daysRemaining;
+
+        return `
+          <tr>
+            <td><strong>${t.id}</strong></td>
+            <td>${escapeHtml(t.title)}</td>
+            <td>${deletedDate}</td>
+            <td>
+              ${isRestorable 
+                ? `<span class="badge-restorable">${daysRemaining} días restantes</span>`
+                : '<span class="badge-expired">Expirado (>30 días)</span>'
+              }
+            </td>
+            <td>
+              ${isRestorable 
+                ? `<button class="btn-primary" style="font-size: 11px; padding: 4px 8px;" onclick="restoreTaskAction('${t.id}')">Restaurar</button>`
+                : '<span style="color: var(--text-subtle); font-size: 12px;">No restaurable</span>'
+              }
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    async function deleteTaskPrompt(id) {
+      if (!confirm(`¿Mover la tarea ${id} a la papelera? Podrás restaurarla durante los próximos 30 días.`)) {
+        return;
+      }
+      const res = await callApi('deleteTask', { id });
+      if (res) {
+        showToast(`Tarea ${id} movida a la papelera.`, 'info');
+        await loadAllData();
+      }
+    }
+
+    async function restoreTaskAction(id) {
+      const res = await callApi('restoreTask', { id });
+      if (res) {
+        showToast(`Tarea ${id} restaurada exitosamente.`, 'success');
+        await loadArchivedData();
+      }
+    }
+
+    // Modal Create & Edit Operations
+    function openCreateModal() {
+      document.getElementById('modalTitle').textContent = 'Nueva Tarea';
+      document.getElementById('taskId').value = '';
+      document.getElementById('taskTitleInput').value = '';
+      document.getElementById('taskDescInput').value = '';
+      document.getElementById('taskPriorityInput').value = 'MEDIUM';
+      document.getElementById('taskPointsInput').value = '';
+      document.getElementById('taskAssigneeInput').value = '';
+      document.getElementById('taskModal').classList.add('open');
+    }
+
+    function openEditModal(id) {
+      const task = currentTasks.find(t => t.id === id);
+      if (!task) return;
+
+      document.getElementById('modalTitle').textContent = `Editar Tarea (${task.id})`;
+      document.getElementById('taskId').value = task.id;
+      document.getElementById('taskTitleInput').value = task.title;
+      document.getElementById('taskDescInput').value = task.description || '';
+      document.getElementById('taskPriorityInput').value = task.priority || 'MEDIUM';
+      document.getElementById('taskPointsInput').value = task.storyPoints !== null ? String(task.storyPoints) : '';
+      document.getElementById('taskAssigneeInput').value = task.assignee || '';
+      document.getElementById('taskModal').classList.add('open');
+    }
+
+    function closeModal() {
+      document.getElementById('taskModal').classList.remove('open');
+    }
+
+    async function submitTaskForm() {
+      const id = document.getElementById('taskId').value;
+      const title = document.getElementById('taskTitleInput').value.trim();
+      const description = document.getElementById('taskDescInput').value.trim();
+      const priority = document.getElementById('taskPriorityInput').value;
+      const pointsVal = document.getElementById('taskPointsInput').value;
+      const assignee = document.getElementById('taskAssigneeInput').value.trim();
+
+      if (!title) {
+        showToast('El título es obligatorio.', 'error');
+        return;
+      }
+
+      const payload = {
+        title,
+        description,
+        priority,
+        storyPoints: pointsVal ? parseInt(pointsVal, 10) : null,
+        assignee
+      };
+
+      if (!id) {
+        // Create
+        const res = await callApi('createTask', payload);
+        if (res) {
+          showToast(`Tarea ${res.id} creada exitosamente.`, 'success');
+          closeModal();
+          await loadAllData();
+        }
+      } else {
+        // Edit
+        payload.id = id;
+        const res = await callApi('updateTask', payload);
+        if (res) {
+          showToast(`Tarea ${id} actualizada.`, 'success');
+          closeModal();
+          await loadAllData();
+        }
+      }
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+  </script>
+</body>
+</html>
+

@@ -1,0 +1,29 @@
+{
+  "name": "taskbox",
+  "version": "1.0.0",
+  "description": "Clon de Jira para Google Sites con Google Apps Script y persistencia en Google Sheets",
+  "private": true,
+  "main": "apps-script/Code.gs",
+  "scripts": {
+    "test": "jest --runInBand",
+    "test:watch": "jest --watch"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "moduleFileExtensions": [
+      "js",
+      "json",
+      "node",
+      "gs"
+    ],
+    "testMatch": [
+      "**/tests/**/*.test.js"
+    ],
+    "transform": {
+      "^.+\\.gs$": "<rootDir>/tests/helpers/gsTransform.js"
+    }
+  }
+}
